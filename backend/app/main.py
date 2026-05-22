@@ -8,6 +8,7 @@ from app.config import settings
 from app.database import engine
 from app.logging_config import configure_logging
 from app.routers import config as config_router
+from app.routers import dns_checks as dns_checks_router
 from app.routers import scans as scans_router
 from app.routers import sources as sources_router
 
@@ -33,6 +34,7 @@ app.add_middleware(
 )
 
 app.include_router(config_router.router)
+app.include_router(dns_checks_router.router)
 app.include_router(scans_router.router)
 app.include_router(sources_router.router)
 

@@ -55,6 +55,35 @@ export interface PaginatedResponse<T> {
   total: number;
 }
 
+export type DnsCheckJobStatus = "pending" | "running" | "completed" | "failed";
+export type DnsFindingStatus = "pass" | "warn" | "fail" | "info";
+export type DnsSeverity = "critical" | "high" | "medium" | "low" | "info";
+export type DnsCheckType = "spf" | "dmarc" | "mx" | "dkim";
+
+export interface DnsCheckResult {
+  id: number;
+  check_id: string;
+  fqdn: string;
+  check_type: DnsCheckType;
+  status: DnsFindingStatus;
+  severity: DnsSeverity;
+  title: string;
+  detail: string;
+  raw_value: string | null;
+  recommendation: string | null;
+  created_at: string;
+}
+
+export interface DnsCheck {
+  id: string;
+  scan_id: string | null;
+  fqdns: string[];
+  status: DnsCheckJobStatus;
+  created_at: string;
+  completed_at: string | null;
+  results: DnsCheckResult[];
+}
+
 export interface SSEEvent {
   type: "subdomain" | "progress" | "error" | "done";
   fqdn?: string;

@@ -68,3 +68,40 @@ class Subdomain(Base):
     scan: Mapped["Scan"] = relationship("Scan", back_populates="subdomains")
 
     __table_args__ = (UniqueConstraint("scan_id", "fqdn", name="uq_subdomains_scan_fqdn"),)
+
+
+class DnsCheck(Base):
+    __tablename__ = "dns_checks"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scan_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("scans.id", ondelete="SET NULL"), nullable=True
+    )
+    fqdns: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    results: Mapped[list["DnsCheckResult"]] = relationship(
+        "DnsCheckResult", back_populates="check", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+class DnsCheckResult(Base):
+    __tablename__ = "dns_check_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    check_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("dns_checks.id", ondelete="CASCADE"), nullable=False
+    )
+    fqdn: Mapped[str] = mapped_column(Text, nullable=False)
+    check_type: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False)
+    severity: Mapped[str] = mapped_column(Text, nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    detail: Mapped[str] = mapped_column(Text, nullable=False)
+    raw_value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recommendation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    check: Mapped["DnsCheck"] = relationship("DnsCheck", back_populates="results")

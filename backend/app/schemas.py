@@ -76,3 +76,8 @@ class SourceStatus(BaseModel):
     display_name: str
     requires_key: bool
     enabled: bool
+
+
+class DnsCheckCreate(BaseModel):
+    fqdns: list[str]
+    scan_id: uuid.UUID | None = None

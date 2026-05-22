@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Download, Search } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Download, Search, Shield } from "lucide-react";
 import { api } from "@/lib/api";
 import type { PaginatedResponse, Subdomain } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -12,23 +12,27 @@ const LIMIT = 100;
 
 interface Props {
   scanId: string;
+  selectable?: boolean;
+  onRunDnsCheck?: (fqdns: string[]) => void;
 }
 
-export default function ResultsTable({ scanId }: Props) {
-  const [data, setData]               = useState<PaginatedResponse<Subdomain> | null>(null);
-  const [search, setSearch]           = useState("");
+export default function ResultsTable({ scanId, selectable, onRunDnsCheck }: Props) {
+  const [data, setData]                 = useState<PaginatedResponse<Subdomain> | null>(null);
+  const [search, setSearch]             = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
-  const [hasIp, setHasIp]             = useState<boolean | undefined>(undefined);
-  const [offset, setOffset]           = useState(0);
+  const [hasIp, setHasIp]               = useState<boolean | undefined>(undefined);
+  const [offset, setOffset]             = useState(0);
+  const [selection, setSelection]       = useState<Set<string>>(new Set());
+  const headerCheckRef                  = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     try {
       const result = await api.scans.results(scanId, {
         offset,
-        limit: LIMIT,
-        search:    search      || undefined,
-        source:    sourceFilter || undefined,
-        has_ip:    hasIp,
+        limit:  LIMIT,
+        search: search       || undefined,
+        source: sourceFilter || undefined,
+        has_ip: hasIp,
       });
       setData(result);
     } catch (e) {
@@ -38,7 +42,37 @@ export default function ResultsTable({ scanId }: Props) {
 
   useEffect(() => { load(); }, [load]);
 
-  useEffect(() => { setOffset(0); }, [search, sourceFilter, hasIp]);
+  // Reset offset and selection when filters change
+  useEffect(() => { setOffset(0); setSelection(new Set()); }, [search, sourceFilter, hasIp]);
+
+  const pageItems = data?.items ?? [];
+
+  // Keep header checkbox indeterminate state in sync
+  useEffect(() => {
+    const el = headerCheckRef.current;
+    if (!el) return;
+    const all  = pageItems.length > 0 && pageItems.every((s) => selection.has(s.fqdn));
+    const some = pageItems.some((s) => selection.has(s.fqdn));
+    el.checked       = all;
+    el.indeterminate = some && !all;
+  });
+
+  function togglePage() {
+    const allSelected = pageItems.every((s) => selection.has(s.fqdn));
+    const next = new Set(selection);
+    if (allSelected) pageItems.forEach((s) => next.delete(s.fqdn));
+    else             pageItems.forEach((s) => next.add(s.fqdn));
+    setSelection(next);
+  }
+
+  function toggleRow(fqdn: string, checked: boolean) {
+    const next = new Set(selection);
+    if (checked) next.add(fqdn);
+    else         next.delete(fqdn);
+    setSelection(next);
+  }
+
+  const colSpan = selectable ? 5 : 4;
 
   return (
     <div className="space-y-4">
@@ -72,7 +106,16 @@ export default function ResultsTable({ scanId }: Props) {
           <option value="false">No IP</option>
         </select>
 
-        <div className="flex gap-1 ml-auto">
+        <div className="flex gap-1 ml-auto flex-wrap">
+          {selectable && selection.size > 0 && (
+            <Button
+              size="sm"
+              onClick={() => onRunDnsCheck?.(Array.from(selection))}
+            >
+              <Shield className="h-3 w-3 mr-1.5" />
+              DNS Security Check ({selection.size})
+            </Button>
+          )}
           <Button size="sm" variant="outline" asChild>
             <a href={api.scans.exportUrl(scanId, "csv")} download>
               <Download className="h-3 w-3 mr-1" />CSV
@@ -87,13 +130,28 @@ export default function ResultsTable({ scanId }: Props) {
       </div>
 
       {data && (
-        <p className="text-xs text-muted-foreground">{data.total.toLocaleString()} subdomains</p>
+        <p className="text-xs text-muted-foreground">
+          {data.total.toLocaleString()} subdomains
+          {selectable && selection.size > 0 && (
+            <span className="text-foreground ml-2">· {selection.size} selected</span>
+          )}
+        </p>
       )}
 
       <div className="rounded-lg border border-border overflow-x-auto">
         <table className="w-full text-sm min-w-[700px]">
           <thead>
             <tr className="border-b border-border bg-muted/50">
+              {selectable && (
+                <th className="w-10 px-3 py-2.5 text-center">
+                  <input
+                    type="checkbox"
+                    ref={headerCheckRef}
+                    className="h-3.5 w-3.5 rounded accent-primary"
+                    onChange={togglePage}
+                  />
+                </th>
+              )}
               <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Domain</th>
               <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">FQDN</th>
               <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">IPs</th>
@@ -106,6 +164,16 @@ export default function ResultsTable({ scanId }: Props) {
                 key={sub.id}
                 className="border-b border-border/40 hover:bg-muted/30 transition-colors"
               >
+                {selectable && (
+                  <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 rounded accent-primary"
+                      checked={selection.has(sub.fqdn)}
+                      onChange={(e) => toggleRow(sub.fqdn, e.target.checked)}
+                    />
+                  </td>
+                )}
                 <td className="px-4 py-2 font-mono text-xs text-muted-foreground">{sub.domain ?? "—"}</td>
                 <td className="px-4 py-2 font-mono text-xs">{sub.fqdn}</td>
                 <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
@@ -124,7 +192,7 @@ export default function ResultsTable({ scanId }: Props) {
             ))}
             {data?.items.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-10 text-center text-muted-foreground text-sm">
+                <td colSpan={colSpan} className="px-4 py-10 text-center text-muted-foreground text-sm">
                   No results
                 </td>
               </tr>

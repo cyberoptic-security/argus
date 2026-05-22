@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type { Scan } from "@/lib/types";
 import ResultsTable from "@/components/ResultsTable";
+import DnsCheckPanel from "@/components/DnsCheckPanel";
 import LiveTerminal from "@/components/LiveTerminal";
 import { Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ export default function ScanDetailPage() {
   const router = useRouter();
   const [scan, setScan]               = useState<Scan | null>(null);
   const [showTerminal, setShowTerminal] = useState(false);
+  const [dnsCheckId, setDnsCheckId]   = useState<string | null>(null);
 
   useEffect(() => {
     api.scans.get(id).then(setScan).catch(console.error);
@@ -47,6 +49,15 @@ export default function ScanDetailPage() {
   async function cancelScan() {
     await api.scans.cancel(id).catch(console.error);
     setScan(await api.scans.get(id).catch(() => scan!));
+  }
+
+  async function handleRunDnsCheck(fqdns: string[]) {
+    try {
+      const check = await api.dnsChecks.create({ fqdns, scan_id: id });
+      setDnsCheckId(check.id);
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   async function deleteScan() {
@@ -115,9 +126,21 @@ export default function ScanDetailPage() {
           <CardTitle>Results</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResultsTable scanId={id} />
+          <ResultsTable
+            scanId={id}
+            selectable={scan.status === "completed"}
+            onRunDnsCheck={handleRunDnsCheck}
+          />
         </CardContent>
       </Card>
+
+      {scan.status === "completed" && (
+        <DnsCheckPanel
+          scanId={id}
+          activeCheckId={dnsCheckId}
+          onReset={() => setDnsCheckId(null)}
+        />
+      )}
     </div>
   );
 }

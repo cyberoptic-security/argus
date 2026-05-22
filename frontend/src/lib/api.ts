@@ -1,5 +1,6 @@
 import type {
   ApiKeyStatus,
+  DnsCheck,
   PaginatedResponse,
   Scan,
   ScanCreate,
@@ -94,5 +95,18 @@ export const api = {
 
   sources: {
     list: () => req<SourceStatus[]>("/api/sources"),
+  },
+
+  dnsChecks: {
+    create: (body: { fqdns: string[]; scan_id?: string }) =>
+      req<DnsCheck>("/api/dns-checks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+
+    get: (id: string) => req<DnsCheck>(`/api/dns-checks/${id}`),
+
+    getByScan: (scanId: string) => req<DnsCheck>(`/api/dns-checks/by-scan/${scanId}`),
   },
 };
