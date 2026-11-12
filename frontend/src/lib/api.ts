@@ -1,4 +1,6 @@
 import type {
+  ApiKeyExport,
+  ApiKeyImportResult,
   ApiKeyStatus,
   DnsCheck,
   PaginatedResponse,
@@ -77,6 +79,15 @@ export const api = {
 
     deleteApiKey: (source: string) =>
       fetch(`${BASE}/api/config/api-keys/${source}`, { method: "DELETE" }),
+
+    exportApiKeys: () => req<ApiKeyExport>("/api/config/api-keys/export"),
+
+    importApiKeys: (body: ApiKeyExport) =>
+      req<ApiKeyImportResult>("/api/config/api-keys/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }),
 
     wordlists: () => req<Wordlist[]>("/api/config/wordlists"),
 

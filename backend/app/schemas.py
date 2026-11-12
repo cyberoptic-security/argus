@@ -18,6 +18,23 @@ class ApiKeySet(BaseModel):
     api_secret: str | None = None
 
 
+class ApiKeyExportEntry(BaseModel):
+    source: str
+    api_key: str
+    api_secret: str | None = None
+
+
+class ApiKeyExport(BaseModel):
+    version: int = 1
+    exported_at: datetime | None = None
+    keys: list[ApiKeyExportEntry]
+
+
+class ApiKeyImportResult(BaseModel):
+    imported: list[str]
+    skipped: list[str]
+
+
 class WordlistResponse(BaseModel):
     id: int
     name: str

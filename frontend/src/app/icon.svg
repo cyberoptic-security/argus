@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Background: matches app theme hsl(222 47% 9%) -->
+  <rect width="64" height="64" rx="14" fill="#0c1322"/>
+  <!-- Eye outline -->
+  <path d="M8 32 C16 18, 48 18, 56 32 C48 46, 16 46, 8 32 Z"
+        fill="none" stroke="#1a8dff" stroke-width="3.5" stroke-linejoin="round"/>
+  <!-- Iris: primary blue hsl(212 100% 55%) -->
+  <circle cx="32" cy="32" r="9.5" fill="#1a8dff"/>
+  <!-- Pupil -->
+  <circle cx="32" cy="32" r="4.5" fill="#0c1322"/>
+  <!-- Glint -->
+  <circle cx="35.5" cy="28.5" r="2" fill="#bfdfff"/>
+</svg>

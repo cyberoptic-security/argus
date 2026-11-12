@@ -36,6 +36,23 @@ export interface ApiKeyStatus {
   has_secret: boolean;
 }
 
+export interface ApiKeyExportEntry {
+  source: string;
+  api_key: string;
+  api_secret: string | null;
+}
+
+export interface ApiKeyExport {
+  version: number;
+  exported_at: string | null;
+  keys: ApiKeyExportEntry[];
+}
+
+export interface ApiKeyImportResult {
+  imported: string[];
+  skipped: string[];
+}
+
 export interface Wordlist {
   id: number;
   name: string;

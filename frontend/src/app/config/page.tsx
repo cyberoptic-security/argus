@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Trash2, Upload, Save } from "lucide-react";
+import { Trash2, Upload, Save, Download } from "lucide-react";
 import { api } from "@/lib/api";
-import type { ApiKeyStatus, Wordlist } from "@/lib/types";
+import type { ApiKeyExport, ApiKeyStatus, Wordlist } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,8 @@ export default function ConfigPage() {
   const [wlName, setWlName]     = useState("");
   const [uploading, setUploading] = useState(false);
   const fileRef                 = useRef<HTMLInputElement>(null);
+  const importRef               = useRef<HTMLInputElement>(null);
+  const [keyIo, setKeyIo]       = useState<string | null>(null);
 
   async function refresh() {
     const [keys, wls] = await Promise.all([
@@ -62,6 +64,46 @@ export default function ConfigPage() {
     }
   }
 
+  async function exportKeys() {
+    setKeyIo(null);
+    try {
+      const data = await api.config.exportApiKeys();
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `argus-api-keys-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setKeyIo(`Exported ${data.keys.length} key${data.keys.length === 1 ? "" : "s"}.`);
+    } catch (e) {
+      console.error(e);
+      setKeyIo("Export failed.");
+    }
+  }
+
+  async function importKeys(file: File) {
+    setKeyIo(null);
+    try {
+      const data = JSON.parse(await file.text()) as ApiKeyExport;
+      if (!Array.isArray(data.keys)) throw new Error("Invalid export file");
+      const result = await api.config.importApiKeys(data);
+      const parts = [`Imported ${result.imported.length} key${result.imported.length === 1 ? "" : "s"}.`];
+      if (result.skipped.length > 0) {
+        parts.push(`Skipped: ${result.skipped.join(", ")}.`);
+      }
+      setKeyIo(parts.join(" "));
+      await refresh();
+    } catch (e) {
+      console.error(e);
+      setKeyIo("Import failed — check the file is a valid Argus key export.");
+    } finally {
+      if (importRef.current) importRef.current.value = "";
+    }
+  }
+
   async function deleteKey(source: string) {
     await api.config.deleteApiKey(source).catch(console.error);
     await refresh();
@@ -94,7 +136,30 @@ export default function ConfigPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>API Keys</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>API Keys</CardTitle>
+            <div className="flex items-center gap-2">
+              <input
+                ref={importRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) importKeys(file);
+                }}
+              />
+              <Button size="sm" variant="outline" onClick={exportKeys}>
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+                Export
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => importRef.current?.click()}>
+                <Upload className="h-3.5 w-3.5 mr-1.5" />
+                Import
+              </Button>
+            </div>
+          </div>
+          {keyIo && <p className="text-xs text-muted-foreground mt-2">{keyIo}</p>}
         </CardHeader>
         <CardContent className="space-y-5">
           {apiKeys.length === 0 && (
