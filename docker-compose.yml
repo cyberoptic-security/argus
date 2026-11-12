@@ -1,6 +1,8 @@
 services:
   backend:
     build: ./backend
+    dns_opt:
+      - single-request-reopen
     ports: ["8000:8000"]
     environment:
       DATABASE_URL: postgresql+asyncpg://argus:argus@postgres:5432/argus
