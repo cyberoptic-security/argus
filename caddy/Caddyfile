@@ -1,0 +1,20 @@
+# Argus reverse proxy — single entry point for frontend + backend.
+#
+# For production HTTPS, replace ":80" with your domain (e.g. "argus.example.com")
+# and Caddy will provision and renew certificates automatically.
+
+:80 {
+	# Backend API (includes SSE streams — Caddy flushes text/event-stream automatically)
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+
+	handle /health {
+		reverse_proxy backend:8000
+	}
+
+	# Everything else → Next.js frontend
+	handle {
+		reverse_proxy frontend:3000
+	}
+}

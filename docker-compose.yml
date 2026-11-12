@@ -1,9 +1,18 @@
 services:
+  caddy:
+    image: caddy:2-alpine
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [backend, frontend]
+    restart: unless-stopped
+
   backend:
     build: ./backend
     dns_opt:
       - single-request-reopen
-    ports: ["8000:8000"]
     environment:
       DATABASE_URL: postgresql+asyncpg://argus:argus@postgres:5432/argus
       LOG_LEVEL: INFO
@@ -12,11 +21,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    build:
-      context: ./frontend
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
-    ports: ["3010:3000"]
+    build: ./frontend
     depends_on: [backend]
     restart: unless-stopped
 
@@ -36,3 +41,5 @@ services:
 
 volumes:
   postgres-data:
+  caddy-data:
+  caddy-config:
